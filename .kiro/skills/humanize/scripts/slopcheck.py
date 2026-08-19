@@ -6,9 +6,14 @@ Measures the tells that are measurable, so the agent's judgment can be spent
 on the ones that are not (depth, argument, voice).
 
 Bands are tagged with provenance:
-  [P] derived from Rosmine, "Fixing LLM writing with Distribution Fine Tuning"
-      (rosmine.ai, 18 May 2026)
-  [E] calibrated estimate for general English prose; tune to your corpus
+  [P]  derived from Rosmine, "Fixing LLM writing with Distribution Fine Tuning"
+       (rosmine.ai, 18 May 2026), and reproduced against frontier chat output
+  [P!] from the same paper, but measured on an SFT'd base model trained on
+       FineWeb. Tested against modern chat-model prose these signals INVERTED:
+       the human sample scored worse than the AI sample on sentence-initial
+       "The", copula rate, filler n-grams and scaffolding openers. Kept at
+       reduced weight with widened bands. See tests/compare.py.
+  [E]  calibrated estimate for general English prose; tune to your corpus
 
 Usage:
     python3 slopcheck.py draft.md
@@ -246,7 +251,7 @@ def check_emdash(clean, paragraphs, n_words, verbose, raw):
             "human documents, so zero is unremarkable; one per paragraph is not.")
     return Check("em-dash density", round(per_1k, 3),
                  f"{per_1k:.2f}/1k words, in {pct_paras:.0f}% of paragraphs",
-                 "<3/1k and <35% of paragraphs [P]", status, "[P]", 1.0, note,
+                 "<3/1k and <35% of paragraphs [P]", status, "[P]", 1.75, note,
                  [(line_of(raw, m.start()), m.group().strip()) for m in hits]
                  if verbose else [])
 
@@ -290,15 +295,15 @@ def check_token_rates(clean, sentences, n_words):
 
     the_rate = lower.count("the") / max(n_words, 1) * 100
     checks.append(band_high(
-        the_rate, 7.8, 9.0, "<7.8% of words [E]", "'the' rate", "[P]", 1.0,
+        the_rate, 7.8, 9.0, "<7.8% of words [E]", "'the' rate", "[P!]", 0.5,
         "Source paper measured 'the' at +19% and ' The' at +90% vs human.",
         fmt="{:.2f}%"))
 
     copula = sum(lower.count(w) for w in ("is", "are", "was", "were"))
     cop_rate = copula / max(n_words, 1) * 100
     checks.append(band_high(
-        cop_rate, 3.6, 4.8, "<3.6% of words [E]", "copular verb rate", "[P]",
-        1.5, "Measured overuse: ' is' +44%, ' was' +49%, ' are' +31%. "
+        cop_rate, 4.0, 5.5, "<4.0% of words [E]", "copular verb rate", "[P!]",
+        0.75, "Measured overuse: ' is' +44%, ' was' +49%, ' are' +31%. "
              "High copula rate means 'X is Y' assertion instead of action.",
         fmt="{:.2f}%"))
 
@@ -306,16 +311,16 @@ def check_token_rates(clean, sentences, n_words):
         init_the = sum(1 for s in sentences if re.match(r"^\W*The\b", s))
         pct = init_the / len(sentences) * 100
         checks.append(band_high(
-            pct, 14.0, 22.0, "<14% of sentences [E]", "sentences opening 'The'",
-            "[P]", 1.5, "' The' was the single most overused token measured "
+            pct, 16.0, 24.0, "<16% of sentences [E]", "sentences opening 'The'",
+            "[P!]", 0.75, "' The' was the single most overused token measured "
                         "(+90% vs human).", fmt="{:.1f}%"))
 
         openers = [(w[0].lower() if (w := words_of(s)) else "") for s in sentences]
         scaffold = sum(1 for o in openers if o in SCAFFOLD_OPENERS)
         pct_s = scaffold / len(sentences) * 100
         checks.append(band_high(
-            pct_s, 8.0, 15.0, "<8% of sentences [E]",
-            "connective scaffolding openers", "[E]", 1.0,
+            pct_s, 10.0, 18.0, "<10% of sentences [E]",
+            "connective scaffolding openers", "[E]", 0.75,
             "Moreover/Furthermore/Additionally as sentence openers.",
             fmt="{:.1f}%"))
     return checks
@@ -406,8 +411,8 @@ def check_filler_ngrams(clean, n_words, verbose, raw):
             hits += len(found)
             detail.append(f"'{gram}' x{len(found)} ({ratio:.1f}x overused)")
     per_1k = hits / max(n_words, 1) * 1000
-    c = band_high(per_1k, 1.0, 3.0, "<1/1k words [P]",
-                  "grammatical filler n-grams", "[P]", 1.5,
+    c = band_high(per_1k, 2.0, 4.0, "<2/1k words [P!]",
+                  "grammatical filler n-grams", "[P!]", 0.75,
                   "; ".join(detail) if detail else
                   "Measured SFT-vs-DFT ratios: 'it is a' 12.4x, 'be used to' "
                   "11.3x, 'can be used' 7.2x, 'the number of' 3.7x.",
@@ -454,7 +459,7 @@ def check_neg_parallel(clean, n_words, verbose, raw):
             detail.append(f"{label} x{len(found)}")
     per_1k = hits / max(n_words, 1) * 1000
     return band_high(per_1k, 0.5, 1.5, "<0.5/1k words [P]",
-                     "negative parallelism", "[P]", 1.5,
+                     "negative parallelism", "[P]", 2.0,
                      "; ".join(detail) if detail else
                      "'it's not X, it's Y' is named explicitly as a slop sign.",
                      fmt="{:.2f}/1k")
@@ -464,7 +469,7 @@ def check_rule_of_three(clean, n_words):
     triads = re.findall(r"\b[\w'\u2019-]+,\s+[\w'\u2019-]+,?\s+and\s+"
                         r"[\w'\u2019-]+\b", clean)
     per_1k = len(triads) / max(n_words, 1) * 1000
-    return band_high(per_1k, 3.0, 6.0, "<3/1k words [E]",
+    return band_high(per_1k, 4.5, 6.5, "<4.5/1k words [E]",
                      "rule-of-three triads", "[E]", 1.0,
                      f"{len(triads)} triad(s). Check each: if the third item "
                      f"is padding, cut to two." if triads else "",

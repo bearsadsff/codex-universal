@@ -295,3 +295,61 @@ is generic.
   untested.
 - Bands marked `[E]` in this file and in `slopcheck.py` are calibrated
   estimates, not measurements. Treat them as tripwires, not verdicts.
+
+---
+
+## 7. Measured limitation: the function-word findings do not transfer
+
+§4's token table is the paper's most striking result, and testing it against
+frontier chat prose **inverted it**.
+
+The fixtures in `tests/` are one essay in three provenances — student-written,
+chat-model-written, and a hybrid — on the same subject at the same length
+(~560 words each). Run `python3 tests/compare.py` to reproduce.
+
+The overall ranking holds, which is the good news: human 0.0, hybrid 8.6, AI
+21.8 on the linter's rollup. But the per-check breakdown splits sharply.
+
+**Signals that reproduced**, and now carry the most weight:
+
+| Check | Human | AI |
+|---|---|---|
+| em-dash density | 0.0/1k | 7.14/1k, in 57% of paragraphs |
+| negative parallelism | 0.0/1k | 1.79/1k |
+| rule-of-three triads | 3.49/1k | 5.36/1k |
+| sentence-length variation | CV 0.44 | **CV 0.35 — flat** |
+
+**Signals that inverted**, where the human text scored *worse* than the AI:
+
+| Check | Human | AI |
+|---|---|---|
+| sentences opening "The" | 6.06% | 2.78% |
+| connective scaffolding openers | 3.03% | 0% |
+| grammatical filler n-grams | 1.75/1k | 0/1k |
+| copular verb rate | 3.49% | 1.96% |
+
+The reason is provenance. §4 measured an SFT'd Qwen3 trained on FineWeb and
+sampled at T=0.8 — a base model imitating scraped web documents. A modern
+RLHF'd chat model writes nothing like that. It uses contractions, addresses the
+reader, avoids "The X is Y" scaffolding, and reaches for em-dashes and
+"not X, but Y" instead. The paper's own §3 tables hint at this: post-training
+changes the failure mode, and these signals were never measured on a
+post-trained model.
+
+Consequences now encoded in `slopcheck.py`:
+
+- Inverted checks are retagged `[P!]`, downweighted to 0.5–0.75, and their
+  bands widened, because two of them were flagging genuine human prose.
+- Em-dash density and negative parallelism are upweighted to 1.75 and 2.0.
+- The vocabulary blocklists contributed **nothing** on this pair: the AI sample
+  scored 0.0 on both measured and conventional vocabulary. It never said
+  "delve" or "tapestry". A competent modern model does not use the words the
+  blocklists hunt, so treat §4.2 of the inventory as a floor, not a detector.
+- Specificity barely separated the three (3.32 / 2.90 / 3.21), because the AI
+  sample invented plausible figures. The proxy counts specifics; it cannot
+  check whether they are true. That is a reader's job, and it is why sourcing
+  every specific is a guardrail rather than a linter rule.
+
+The general lesson: a detector calibrated on one generation of models decays
+against the next. Re-run `tests/compare.py` with fresh samples periodically,
+and trust the checks that still separate.

@@ -172,6 +172,14 @@ Four checks. All four pass before delivery.
 4. **Attribution test.** Could a reader name who wrote this? "Any competent
    writer" means you produced clean, forgettable text. Return to depth.
 
+5. **External detector, when a key is set.** With `PANGRAM_API_KEY` present,
+   run `scripts/pangram_gate.py --threshold 0.90`, which passes on
+   `fraction_human >= 0.90`. Report the number and the floor it cleared.
+   Treat one score as evidence about one document: detectors disagree with each
+   other, they shift between versions, and `references/metrics.md` §7 shows a
+   detector calibrated on one model generation decaying against the next.
+   A pass here retires none of checks 1–4.
+
 *Completion criterion: every claim traced to the outline, a cited source, or
 LO — anything else marked `[VERIFY]`.*
 
@@ -212,3 +220,5 @@ Load on demand.
 | [`references/intake-template.md`](references/intake-template.md) | The six-field brief |
 | [`references/worked-examples.md`](references/worked-examples.md) | Annotated before/after with measured scores |
 | `scripts/slopcheck.py` | The linter, and the source of truth for target values |
+| `scripts/pangram_gate.py` | External detector check, gated on `fraction_human`. Needs `PANGRAM_API_KEY` |
+| `tests/compare.py` | Calibration harness over three matched-provenance fixtures in `tests/` |
