@@ -21,7 +21,8 @@ Usage:
 Gate: passes when fraction_human >= threshold (default 0.90) for every input.
 
 Exit codes: 0 = every input passed, 1 = at least one below the floor,
-3 = usage error, 4 = missing or rejected API key, 5 = SDK not installed.
+3 = usage error, 4 = missing or rejected API key, 5 = SDK not installed,
+6 = key valid but the account is out of credits.
 
 Response fields used, per pangram-sdk 0.1.11 PangramText.predict():
     fraction_human       0.0-1.0 share of text classified human-written
@@ -82,8 +83,12 @@ def check(client, label: str, raw: str, threshold: float) -> dict:
         res = client.predict(prose)
     except ValueError as exc:
         msg = str(exc)
-        if "Invalid API key" in msg or "401" in msg:
-            print(f"API rejected the key: {msg}", file=sys.stderr)
+        if "Insufficient credits" in msg:
+            print("Pangram account has no credits remaining. The key is valid; "
+                  "top up the balance and retry.", file=sys.stderr)
+            sys.exit(6)
+        if "Invalid API key" in msg:
+            print(f"Pangram rejected the key: {msg}", file=sys.stderr)
             sys.exit(4)
         return {"label": label, "error": msg, "words": n}
 
