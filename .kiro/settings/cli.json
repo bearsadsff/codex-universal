@@ -1,0 +1,13 @@
+{
+  "chat.modelDefaults": {
+    "claude-opus-5": { "output_config": { "effort": "high" } },
+    "claude-opus-4.8": { "output_config": { "effort": "high" } },
+    "claude-opus-4.7": { "output_config": { "effort": "high" } },
+    "claude-opus-4.6": { "output_config": { "effort": "high" } },
+    "claude-sonnet-5": { "output_config": { "effort": "high" } },
+    "claude-sonnet-4.6": { "output_config": { "effort": "high" } },
+    "gpt-5.6-terra": { "reasoning": { "effort": "high" } },
+    "gpt-5.6-sol": { "reasoning": { "effort": "high" } },
+    "gpt-5.6-luna": { "reasoning": { "effort": "high" } }
+  }
+}
