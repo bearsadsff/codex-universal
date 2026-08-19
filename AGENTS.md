@@ -15,3 +15,7 @@ The five canonical triage roles use their default label strings (`needs-triage`,
 ### Domain docs
 
 Single-context: one `CONTEXT.md` at the repo root plus `docs/adr/` for decision records. Both are created lazily, so treat their absence as normal. See `docs/agents/domain.md`.
+
+### Locally authored skills
+
+`humanize` is authored here rather than installed from `mattpocock/skills`, so it has no `skills-lock.json` entry and the `skills` CLI does not manage it. Leave the lock file alone — an entry there would let a sync overwrite local edits. Edit the skill in place at `.kiro/skills/humanize/`, where `scripts/slopcheck.py` owns its target values.
